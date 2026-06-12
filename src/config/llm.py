@@ -10,4 +10,3 @@ llm = ChatGroq(
     api_key=os.getenv("GROQ_API_KEY"),
     temperature=0
 )
-print("GROQ_API_KEY =", os.getenv("GROQ_API_KEY"))
