@@ -1,35 +1,90 @@
-from src.config.llm import llm
-from langchain.agents import create_agent
-
-# src/agents/main_agent.py
-
 import json
 
-from src.tools.subagent_tools import (
-    call_reasoning_agent,
-    call_calculator_agent,
-    call_reviewer_agent
+from src.memory.memory_manager import (
+    save_message,
+    get_history
 )
 
-print("step 1")
-def main_agent(question: str):
-    print("\nSTEP 2: Main Agent Started")
-    print("\nSTEP 3: Calling Reasoning Agent")
-    reasoning_result = call_reasoning_agent.invoke(
-        {"query": question}
+from src.tools.subagent_tools import (
+    reasoning_agent,
+    calculator_agent,
+    reviewer_agent
+)
+
+
+def main_agent(
+    user_id: str,
+    question: str
+):
+    print("========== MAIN AGENT STARTED ==========")
+
+    # Load user history
+    history = get_history(user_id)
+
+    # Handle memory questions directly
+    memory_questions = [
+        "what is my previous question",
+        "what was my previous question",
+        "what was my last question",
+        "what did i ask before",
+        "show my last question",
+        "what is my last message",
+        "what was my last message"
+    ]
+
+
+    if question.lower().strip() in memory_questions :
+
+        return {
+            "user_id": user_id,
+            "history": history
+        }
+
+    # Save current user message
+    save_message(
+        user_id=user_id,
+        role="user",
+        content=question
     )
-    
-    reasoning_result = json.loads(reasoning_result)
 
-    calculation_result = call_calculator_agent.invoke(
-        {"query": json.dumps(reasoning_result)}
+    print("STEP 1: Calling Reasoning Agent")
+
+    reasoning_result = reasoning_agent.invoke(
+        {
+            "query": question,
+            "history": history
+        }
     )
-    print("\nSTEP 4: Reasoning Agent Completed")
-    print("\nSTEP 5: Calling Calculator Agent")
 
-    calculation_result = json.loads(calculation_result)
+    try:
+        if isinstance(reasoning_result, str):
+            reasoning_result = json.loads(reasoning_result)
+    except Exception:
+        return {
+            "error": "Reasoning Agent returned invalid JSON",
+            "response": reasoning_result
+        }
 
-    review_result = call_reviewer_agent.invoke(
+    print("STEP 2: Calling Calculator Agent")
+
+    calculation_result = calculator_agent.invoke(
+        {
+            "query": json.dumps(reasoning_result)
+        }
+    )
+
+    try:
+        if isinstance(calculation_result, str):
+            calculation_result = json.loads(calculation_result)
+    except Exception:
+        return {
+            "error": "Calculator Agent returned invalid JSON",
+            "response": calculation_result
+        }
+
+    print("STEP 3: Calling Reviewer Agent")
+
+    review_result = reviewer_agent.invoke(
         {
             "query": json.dumps(
                 {
@@ -39,14 +94,30 @@ def main_agent(question: str):
             )
         }
     )
-    print("\nSTEP 6: Calculator Agent Completed")
-    print("\nSTEP 7: Calling Reviewer Agent")
 
-    review_result = json.loads(review_result)
-    print("\nSTEP 8: Reviewer Agent Completed")
+    try:
+        if isinstance(review_result, str):
+            review_result = json.loads(review_result)
+    except Exception:
+        return {
+            "error": "Reviewer Agent returned invalid JSON",
+            "response": review_result
+        }
 
-    return {
+    final_response = {
         "reasoning_agent": reasoning_result,
         "calculator_agent": calculation_result,
         "reviewer_agent": review_result
     }
+
+    # Save assistant response
+    save_message(
+        user_id=user_id,
+        role="assistant",
+        content=json.dumps(final_response)
+    )
+
+    print("STEP 4: Response Saved To Memory")
+    print("========== MAIN AGENT FINISHED ==========")
+
+    return final_response

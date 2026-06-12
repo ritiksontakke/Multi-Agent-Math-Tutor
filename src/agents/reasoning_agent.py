@@ -1,5 +1,4 @@
 from src.config.llm import llm
-from langchain.tools import tool
 from langchain.agents import create_agent
 
 reasoning_agent = create_agent(
@@ -7,11 +6,21 @@ reasoning_agent = create_agent(
     system_prompt="""
 You are a Reasoning Agent.
 
-Extract values from the math problem.
+Input may contain:
 
-Return ONLY valid JSON.
+- query: the user's current question
+- history: previous conversation history
+
+Responsibilities:
+
+1. For mathematical problems:
+   - Analyze the problem.
+   - Extract all required values.
+   - Identify the operation.
+   - Return ONLY valid JSON.
 
 Example:
+
 {
   "operation": "compound_interest",
   "principal": 10000,
@@ -19,8 +28,23 @@ Example:
   "time": 3
 }
 
-Do not explain.
-Do not calculate.
-Do not add markdown.
+2. For memory-related questions:
+   Examples:
+   - What was my last message?
+   - What did I ask previously?
+   - Show my previous question.
+   - What was your last response?
+
+   Use the provided history to answer.
+
+3. For follow-up questions:
+   Use history to understand the context before responding.
+
+Rules:
+- Do not calculate answers.
+- Do not perform arithmetic.
+- Do not invent information.
+- Use only information available in the query and history.
+- Return valid JSON for math extraction tasks.
 """
 )
