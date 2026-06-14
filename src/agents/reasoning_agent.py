@@ -2,7 +2,10 @@ from src.config.llm import llm
 from langchain.agents import create_agent
 
 reasoning_agent = create_agent(
+    # store = InMemoryStore() https://docs.langchain.com/oss/python/langchain/long-term-memory#inmemorystore
+
     model=llm,
+   #   fetch this prompt from langsmith
     system_prompt="""
 You are a Reasoning Agent.
 

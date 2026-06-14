@@ -11,6 +11,8 @@ from src.tools.subagent_tools import (
     reviewer_agent
 )
 
+# ARCH:
+# orch: t1 , t2, t3 as per query decide which tool to call (t1, all tool)
 
 def main_agent(
     user_id: str,
@@ -20,6 +22,8 @@ def main_agent(
 
     # Load user history
     history = get_history(user_id)
+
+# store = InMemoryStore() https://docs.langchain.com/oss/python/langchain/long-term-memory#inmemorystore
 
     # Handle memory questions directly
     memory_questions = [
