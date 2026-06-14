@@ -1,9 +1,6 @@
 from langchain.tools import tool
-import os
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-
-load_dotenv()
+from langchain.agents import create_agent
+from utils import get_groq_model, get_system_prompt
 
 @tool("add_numbers")
 def add(a: int, b: int) -> int:
@@ -57,7 +54,7 @@ def divide(a: int, b: int) -> float:
     Use this tool when you need to perform division on two numbers.
     Note: b must not be zero.
 
-    Args:
+    Args:+
         a (int): The dividend (number to be divided).
         b (int): The divisor (number to divide by). Must be non-zero.
 
@@ -71,50 +68,26 @@ def divide(a: int, b: int) -> float:
         raise ZeroDivisionError("Cannot divide by zero.")
     return a / b
 
-#  main code
+@tool("arithmetic_agent")
+def get_arithmetic_agent(query: str):
+    """
+    Handle arithmetic-related user requests by delegating them
+    to a specialized Arithmetic Agent.
 
-from langchain.agents import create_agent
+    Use this tool when the query involves mathematical operations
+    such as addition, subtraction, multiplication, or division.
 
+    Args:
+        query (str): The user's arithmetic question or calculation request.
 
-class Main:
+    Returns:
+        str: The Arithmetic Agent's response containing the calculated result.
+    """
 
-    user_query : str
-
-    def __init__(self, user_query: str = "what is 2+2"):
-        self.user_query = user_query
-
-    def get_llm(self):
-        return ChatGroq(
-            model="llama-3.3-70b-versatile",
-            api_key=os.getenv("GROQ_API_KEY"),
-            temperature=0
-        )
-
-    def get_orch_agent(self, system_prompt: str):
-        return create_agent(
-            model = self.get_llm(),
+    arithmetic_agent = create_agent(
+            model = get_groq_model(),
             tools=[add, sub, mul, divide],
-            system_prompt=system_prompt,
+            system_prompt=get_system_prompt("project01_date_agent"),
         )
-    
-    def get_prompt(self) -> str:
-        from langsmith import Client
-
-        client = Client()
-        prompt = client.pull_prompt("main_agent:production")
-        system_message = prompt.messages[0].prompt.template
-        return system_message
-
-    
-    def main(self):
-        system_prompt = self.get_prompt()
-        agent = self.get_orch_agent(system_prompt=system_prompt)
-        result = agent.invoke({"messages": [{"role": "user", "content": self.user_query}]})
-        res = result["messages"][-1].content
-        print("res : ", res)
-    
-if __name__ == "__main__":
-    user_query = "what is 12*17 and 100+7 and 16-3 and 786 / 2"
-    main = Main(user_query);
-    main.main()
-    # python src/learn/one_agent_many_tools.py
+    result = arithmetic_agent.invoke({"messages": [{"role": "user", "content": query}]})
+    return result["messages"][-1].content
